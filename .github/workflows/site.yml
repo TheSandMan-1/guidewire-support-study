@@ -1,0 +1,37 @@
+name: Publish site
+on:
+  push:
+  workflow_dispatch:
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unzip the two parts into the repo root
+        run: |
+          if ls site-part-*.zip >/dev/null 2>&1; then
+            for z in site-part-*.zip; do unzip -o -q "$z"; done
+            for d in site-part-*/; do mv -f "$d"* . ; rmdir "$d"; done
+            git rm -q site-part-*.zip
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "Unzip the site files"
+            git push
+          fi
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deploy
+        uses: actions/deploy-pages@v4
